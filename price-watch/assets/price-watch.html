@@ -1,0 +1,325 @@
+<title>Price Watch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a shelf of price tags. Summary strip, then one tag per watched product, then the add form and limits. */
+:root {
+  --bg: #f5f6f3; --surface: #ffffff; --fg: #1b1f1d; --muted: #5d6661; --line: #dfe3df;
+  --accent: #0f6b5c; --accent-soft: #e1f0ec; --deal: #b7791f; --deal-soft: #fbf0dc;
+  --bad: #b42318; --bad-soft: #fde8e6; --spark: #0f6b5c;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111513; --surface: #181d1b; --fg: #e8ece9; --muted: #9aa5a0; --line: #2a322e;
+  --accent: #4cc3a9; --accent-soft: #163029; --deal: #f0b955; --deal-soft: #33280f;
+  --bad: #ff8a7a; --bad-soft: #3a1915; --spark: #4cc3a9; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111513; --surface: #181d1b; --fg: #e8ece9; --muted: #9aa5a0; --line: #2a322e;
+  --accent: #4cc3a9; --accent-soft: #163029; --deal: #f0b955; --deal-soft: #33280f;
+  --bad: #ff8a7a; --bad-soft: #3a1915; --spark: #4cc3a9; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--display); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 48px }
+main { max-width: 1040px; margin: 0 auto; display: grid; gap: 28px }
+h1 { font-size: 1.9rem; margin: 0; letter-spacing: -0.02em; text-wrap: balance }
+h2 { font-size: 1.05rem; margin: 0; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600 }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px }
+.sub { color: var(--muted); margin: 4px 0 0 }
+.stats { display: flex; flex-wrap: wrap; gap: 8px }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; min-width: 96px }
+.stat b { display: block; font-family: var(--mono); font-size: 1.35rem; font-variant-numeric: tabular-nums }
+.stat span { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted) }
+.note { padding: 10px 14px; border-radius: 8px; background: var(--deal-soft); color: var(--fg); border: 1px solid var(--line) }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px }
+.tag { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 16px 14px; display: grid; gap: 10px; min-width: 0 }
+.tag.alert { border-color: var(--deal); box-shadow: 0 0 0 1px var(--deal) inset }
+.tag-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.store { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600 }
+.pill { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; background: var(--accent-soft); color: var(--accent) }
+.pill.alert { background: var(--deal-soft); color: var(--deal) }
+.pill.attn, .pill.paused { background: var(--bad-soft); color: var(--bad) }
+.pill.paused { background: var(--line); color: var(--muted) }
+.name { font-weight: 600; font-size: 1.02rem; line-height: 1.3; overflow-wrap: anywhere }
+.name a { color: inherit; text-decoration: none } .name a:hover { text-decoration: underline }
+.variant { font-size: 0.82rem; color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere }
+.price-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap }
+.price { font-family: var(--mono); font-size: 2rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em }
+.delta { font-family: var(--mono); font-size: 0.85rem }
+.delta.down { color: var(--accent) } .delta.up { color: var(--bad) }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 0.78rem; color: var(--muted) }
+.facts b { display: block; color: var(--fg); font-family: var(--mono); font-size: 0.92rem; font-variant-numeric: tabular-nums; font-weight: 600 }
+svg.spark { width: 100%; height: 56px; display: block }
+.meta { font-size: 0.78rem; color: var(--muted) }
+.actions { display: flex; flex-wrap: wrap; gap: 6px }
+button, .btn { font: inherit; font-size: 0.82rem; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 6px 10px; cursor: pointer }
+button:hover { border-color: var(--accent) }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600 }
+button.danger { color: var(--bad) }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+button:disabled { opacity: 0.5; cursor: default }
+.inline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
+input, select { font: inherit; font-size: 0.9rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 7px 9px; min-width: 0 }
+input.num { width: 110px; font-family: var(--mono) }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px }
+.form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; align-items: end }
+.form label, .limits label { display: grid; gap: 4px; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 0 }
+.limits { display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 8px; align-items: end }
+.offers { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 0.85rem }
+.offers li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 6px; min-width: 0 }
+.offers li.best { background: var(--accent-soft) }
+.offers .o-store { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.offers .o-price { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600 }
+.offers .o-out { color: var(--muted); text-decoration: line-through }
+.offers a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap }
+.offers a:hover { text-decoration: underline }
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; color: var(--muted) }
+.empty code, .hint code { font-family: var(--mono); background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--fg) }
+.hint { font-size: 0.82rem; color: var(--muted) }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 0.85rem }
+@media (max-width: 720px) { .form, .limits { grid-template-columns: 1fr 1fr } .form label:first-child, .limits label:nth-child(3) { grid-column: 1 / -1 } }
+@media (prefers-reduced-motion: no-preference) { .tag { transition: border-color .2s } }
+</style>
+
+<main>
+  <header class="top">
+    <div>
+      <h1>Price Watch</h1>
+      <p class="sub" id="sub">The lowest price across the top stores, checked for you. Nothing is ever bought without your yes in chat.</p>
+    </div>
+    <div class="stats" aria-live="polite">
+      <div class="stat"><b id="s-watch">0</b><span>Watching</span></div>
+      <div class="stat"><b id="s-alert">0</b><span>Alerts</span></div>
+      <div class="stat"><b id="s-saved">–</b><span>Below first seen</span></div>
+    </div>
+  </header>
+
+  <div class="note" id="status" hidden></div>
+
+  <section aria-labelledby="h-shelf" style="display:grid;gap:12px">
+    <h2 id="h-shelf">On watch</h2>
+    <div class="shelf" id="shelf"></div>
+    <div class="empty" id="empty">
+      <p><strong>No products on watch yet.</strong></p>
+      <p>Add one below, or tell Claude something like <code>watch the Sony WH-1000XM5 and tell me when it drops under $280</code>.</p>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-add">
+    <h2 id="h-add">Add a product</h2>
+    <form class="form" id="add-form">
+      <label>Product name or link<input id="add-url" required placeholder="Sony WH-1000XM5 black"></label>
+      <label>Alert below (optional)<input id="add-target" class="num" type="number" min="0" step="0.01" placeholder="Optional"></label>
+      <label>When it hits
+        <select id="add-mode"><option value="track">Tell me</option><option value="buy">Get it ready to buy</option></select></label>
+      <label>Check
+        <select id="add-every"><option value="daily">Daily</option><option value="6h">Every 6 hours</option><option value="weekly">Weekly</option></select></label>
+      <button class="primary" type="submit" id="add-btn">Add</button>
+    </form>
+    <p class="hint">On its next check Claude finds the exact model and compares the top stores. With no price set, you hear about every new low. "Get it ready to buy" means Claude fills the cart and asks you before placing any order.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-limits">
+    <h2 id="h-limits">Spending limits</h2>
+    <form class="limits" id="limits-form">
+      <label>Max per order<input id="lim-max" class="num" type="number" min="0" step="1" placeholder="500"></label>
+      <label>Currency<input id="lim-cur" maxlength="3" placeholder="USD"></label>
+      <label>Stores Claude may use<input id="lim-stores" placeholder="amazon.com, bestbuy.com, walmart.com, target.com"></label>
+      <button type="submit" id="lim-btn">Save limits</button>
+    </form>
+    <p class="hint">Claude stops before checkout if the total with tax and shipping goes over the cap, or if the store isn't on this list.</p>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let db = null, watches = [], settings = {}, canWrite = true;
+
+  const fmt = (n, cur) => {
+    if (typeof n !== 'number' || !isFinite(n)) return '–';
+    try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: cur || settings.currency || 'USD' }).format(n) }
+    catch { return n.toFixed(2) }
+  };
+  const ago = (iso) => {
+    if (!iso) return 'not checked yet';
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (!isFinite(m)) return 'not checked yet';
+    if (m < 60) return `checked ${Math.max(m, 0)} min ago`;
+    if (m < 2880) return `checked ${Math.round(m / 60)} h ago`;
+    return `checked ${Math.round(m / 1440)} days ago`;
+  };
+  const safeUrl = (u) => (typeof u === 'string' && u.startsWith('https://')) ? u : null;
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e };
+  const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600) };
+  const status = (msg) => { const s = $('status'); s.textContent = msg || ''; s.hidden = !msg };
+
+  const STATUS = {
+    new: ['Waiting for first check', ''], watching: ['Watching', ''], alert: ['Price alert', 'alert'],
+    'cart-ready': ['Cart ready, needs your OK', 'alert'], paused: ['Paused', 'paused'],
+    'needs-attention': ['Needs attention', 'attn'], bought: ['Bought', ''], 'out-of-stock': ['Out of stock', 'attn'],
+  };
+
+  function spark(history, target) {
+    const pts = (Array.isArray(history) ? history : []).filter(h => typeof h?.p === 'number').slice(-60);
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 300 56'); svg.setAttribute('class', 'spark'); svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('role', 'img');
+    if (pts.length < 2) { svg.setAttribute('aria-label', 'Not enough checks for a price trend yet'); const t = document.createElementNS(NS, 'text'); t.setAttribute('x', '0'); t.setAttribute('y', '34'); t.setAttribute('fill', 'var(--muted)'); t.setAttribute('font-size', '12'); t.textContent = 'Trend appears after two checks'; svg.append(t); return svg }
+    const vals = pts.map(p => p.p).concat(typeof target === 'number' ? [target] : []);
+    let lo = Math.min(...vals), hi = Math.max(...vals); if (hi === lo) { hi += 1; lo -= 1 }
+    const x = (i) => 2 + i * (296 / (pts.length - 1)), y = (v) => 6 + (1 - (v - lo) / (hi - lo)) * 44;
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.p).toFixed(1)}`).join('');
+    const area = document.createElementNS(NS, 'path'); area.setAttribute('d', `${d}L${x(pts.length - 1)},52L${x(0)},52Z`); area.setAttribute('fill', 'var(--accent-soft)');
+    const line = document.createElementNS(NS, 'path'); line.setAttribute('d', d); line.setAttribute('fill', 'none'); line.setAttribute('stroke', 'var(--spark)'); line.setAttribute('stroke-width', '2'); line.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.append(area, line);
+    if (typeof target === 'number') { const t = document.createElementNS(NS, 'line'); t.setAttribute('x1', '0'); t.setAttribute('x2', '300'); t.setAttribute('y1', y(target)); t.setAttribute('y2', y(target)); t.setAttribute('stroke', 'var(--deal)'); t.setAttribute('stroke-dasharray', '4 4'); t.setAttribute('vector-effect', 'non-scaling-stroke'); svg.append(t) }
+    const last = pts[pts.length - 1]; const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', x(pts.length - 1)); c.setAttribute('cy', y(last.p)); c.setAttribute('r', '3.5'); c.setAttribute('fill', 'var(--spark)'); svg.append(c);
+    svg.setAttribute('aria-label', `Price over the last ${pts.length} checks, now ${fmt(last.p)}`);
+    return svg;
+  }
+
+  async function write(id, patch, msg) {
+    if (!db) return;
+    try { await db.doc('watches/' + id).update(patch); if (msg) toast(msg) }
+    catch (e) { toast(e?.code === 'invalid_argument' ? 'You can view this list but not change it.' : 'Could not save. Try again in a moment.') }
+  }
+
+  function card(w) {
+    const cur = w.currency || settings.currency;
+    const [label, cls] = STATUS[w.status] || STATUS.watching;
+    const li = el('article', 'tag' + (cls === 'alert' ? ' alert' : ''));
+    const head = el('div', 'tag-head');
+    head.append(el('span', 'store', w.store || 'Store pending'), el('span', 'pill ' + cls, label));
+    if (w.mode === 'buy') head.append(el('span', 'pill', 'Buy when it hits'));
+    const name = el('div', 'name'); const href = safeUrl(w.url);
+    if (href) { const a = el('a', null, w.name || w.url); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; name.append(a) } else name.textContent = w.name || w.url || 'Unnamed product';
+    li.append(head, name);
+    const ident = [w.variant, w.sku && `SKU ${w.sku}`, w.condition && w.condition !== 'new' ? w.condition : null].filter(Boolean).join(' · ');
+    if (ident) li.append(el('div', 'variant', ident));
+
+    const row = el('div', 'price-row'); row.append(el('span', 'price', fmt(w.price, cur)));
+    const hist = Array.isArray(w.history) ? w.history : [];
+    if (hist.length >= 2 && typeof w.price === 'number') {
+      const prev = hist[hist.length - 2].p; const diff = w.price - prev;
+      if (Math.abs(diff) >= 0.01) row.append(el('span', 'delta ' + (diff < 0 ? 'down' : 'up'), `${diff < 0 ? '▼' : '▲'} ${fmt(Math.abs(diff), cur)} since last check`));
+    }
+    li.append(row);
+    const facts = el('div', 'facts');
+    const f = (k, v) => { const d = el('div', null, k); d.prepend(el('b', null, v)); return d };
+    const gap = (typeof w.price === 'number' && typeof w.target === 'number') ? w.price - w.target : null;
+    const nOffers = Array.isArray(w.offers) ? w.offers.filter(o => o && o.inStock !== false).length : 0;
+    facts.append(f('Alert at', typeof w.target === 'number' ? fmt(w.target, cur) : 'New low'), f('Lowest seen', fmt(w.lowest, cur)),
+      gap == null ? f('Stores in stock', nOffers ? String(nOffers) : '–') : f(gap <= 0 ? 'Under target' : 'To target', fmt(Math.abs(gap), cur)));
+    li.append(facts);
+    if (Array.isArray(w.offers) && w.offers.length) {
+      const ul = el('ul', 'offers'); ul.setAttribute('aria-label', 'Prices by store, cheapest first');
+      w.offers.slice(0, 5).forEach((o, i) => {
+        if (!o) return;
+        const row = el('li', i === 0 && o.inStock !== false ? 'best' : '');
+        const price = typeof o.landed === 'number' ? o.landed : o.price;
+        row.append(el('span', 'o-store', o.store || 'Store'), el('span', 'o-price' + (o.inStock === false ? ' o-out' : ''), fmt(price, cur)));
+        const link = safeUrl(o.url);
+        if (link && o.inStock !== false) { const a = el('a', null, 'Buy'); a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.setAttribute('aria-label', `Buy at ${o.store || 'store'}`); row.append(a) }
+        else row.append(el('span', 'meta', o.inStock === false ? 'out' : ''));
+        ul.append(row);
+      });
+      li.append(ul);
+    }
+    li.append(spark(hist, w.target));
+    const metaTxt = [ago(w.lastChecked), w.every && `checks ${w.every === '6h' ? 'every 6 h' : w.every}`, w.inStock === false && 'out of stock'].filter(Boolean).join(' · ');
+    li.append(el('div', 'meta', metaTxt));
+    if (w.note) li.append(el('div', 'meta', w.note));
+
+    if (canWrite) {
+      const acts = el('div', 'actions');
+      const pause = el('button', null, w.status === 'paused' ? 'Resume' : 'Pause');
+      pause.onclick = () => write(w.id, { status: w.status === 'paused' ? 'watching' : 'paused' }, w.status === 'paused' ? 'Resumed' : 'Paused');
+      const edit = el('button', null, typeof w.target === 'number' ? 'Change alert price' : 'Set alert price');
+      edit.onclick = () => {
+        acts.replaceChildren(); const wrap = el('div', 'inline');
+        const inp = el('input', 'num'); inp.type = 'number'; inp.step = '0.01'; inp.min = '0'; inp.id = 'target-' + w.id; inp.value = w.target ?? ''; inp.setAttribute('aria-label', 'Alert price'); inp.placeholder = 'Any new low';
+        const ok = el('button', 'primary', 'Save'); const no = el('button', null, 'Cancel');
+        ok.onclick = () => { const v = parseFloat(inp.value); write(w.id, { target: v > 0 ? v : null }, v > 0 ? 'Alert price saved' : 'Alerting on any new low') };
+        no.onclick = render; wrap.append(inp, ok, no); acts.append(wrap); inp.focus();
+      };
+      acts.append(pause, edit);
+      if (w.mode !== 'buy') { const b = el('button', null, 'Buy when it hits'); b.onclick = () => write(w.id, { mode: 'buy' }, 'Claude will get the cart ready and ask you first'); acts.append(b) }
+      else { const b = el('button', null, 'Just tell me'); b.onclick = () => write(w.id, { mode: 'track' }, 'Alerts only'); acts.append(b) }
+      const rm = el('button', 'danger', 'Remove');
+      rm.onclick = () => {
+        acts.replaceChildren(); const wrap = el('div', 'inline'); wrap.append(el('span', 'meta', 'Stop watching this?'));
+        const yes = el('button', 'danger', 'Remove'); const no = el('button', null, 'Keep');
+        yes.onclick = async () => { try { await db.doc('watches/' + w.id).delete(); toast('Removed') } catch { toast('Could not remove. Try again.') } };
+        no.onclick = render; wrap.append(yes, no); acts.append(wrap);
+      };
+      acts.append(rm); li.append(acts);
+    }
+    return li;
+  }
+
+  function render() {
+    const shelf = $('shelf'); shelf.replaceChildren();
+    const order = { 'cart-ready': 0, alert: 1, 'needs-attention': 2, 'out-of-stock': 3, new: 4, watching: 5, paused: 6, bought: 7 };
+    const list = [...watches].sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5) || String(a.name || '').localeCompare(String(b.name || '')));
+    list.forEach(w => shelf.append(card(w)));
+    $('empty').hidden = list.length > 0;
+    const active = list.filter(w => !['paused', 'bought'].includes(w.status));
+    $('s-watch').textContent = active.length;
+    $('s-alert').textContent = list.filter(w => ['alert', 'cart-ready'].includes(w.status)).length;
+    let saved = 0, any = false;
+    list.forEach(w => { const h = Array.isArray(w.history) ? w.history : []; if (h.length && typeof w.price === 'number' && typeof h[0].p === 'number' && h[0].p > w.price) { saved += h[0].p - w.price; any = true } });
+    $('s-saved').textContent = any ? fmt(saved) : '–';
+  }
+
+  function fillLimits() {
+    if (document.activeElement && document.activeElement.closest('#limits-form')) return;
+    $('lim-max').value = settings.maxPerOrder ?? '';
+    $('lim-cur').value = settings.currency ?? '';
+    $('lim-stores').value = Array.isArray(settings.allowedStores) ? settings.allowedStores.join(', ') : '';
+  }
+
+  const slug = (s) => (String(s).toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'item') + '-' + Math.random().toString(36).slice(2, 6);
+
+  $('add-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); if (!db) { toast('Saving is not available in this view.'); return }
+    const raw = $('add-url').value.trim(); if (!raw) return;
+    const t = parseFloat($('add-target').value);
+    const isUrl = /^https:\/\//.test(raw);
+    const doc = { name: isUrl ? '' : raw, url: isUrl ? raw : '', target: t > 0 ? t : null, mode: $('add-mode').value, every: $('add-every').value,
+      status: 'new', history: [], created: new Date().toISOString(), addedFrom: 'page' };
+    $('add-btn').disabled = true;
+    try { await db.doc('watches/' + slug(raw)).set(doc); $('add-form').reset(); toast('Added. Claude will check it on the next run.') }
+    catch (err) { toast(err?.code === 'quota_exceeded' ? 'The list is full. Remove a product first.' : 'Could not add. Try again.') }
+    finally { $('add-btn').disabled = false }
+  });
+
+  $('limits-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); if (!db) return;
+    const max = parseFloat($('lim-max').value);
+    const next = { maxPerOrder: max > 0 ? max : null, currency: ($('lim-cur').value.trim().toUpperCase() || 'USD').slice(0, 3),
+      allowedStores: $('lim-stores').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean), updated: new Date().toISOString() };
+    $('lim-btn').disabled = true;
+    try { await db.doc('meta/settings').set({ ...settings, ...next }); toast('Limits saved') } catch { toast('Could not save limits.') }
+    finally { $('lim-btn').disabled = false; document.activeElement?.blur() }
+  });
+
+  render();
+  (async () => {
+    const api = window.claude && window.claude.use ? window.claude.use : null;
+    db = api ? await api('db') : null;
+    if (!db) { status('Open this page in Claude to see your watch list.'); canWrite = false; $('add-btn').disabled = true; $('lim-btn').disabled = true; return }
+    const user = await api('user');
+    try { const c = await user?.can?.('data.write'); if (c === false) { canWrite = false; $('add-form').closest('section').hidden = true; $('limits-form').closest('section').hidden = true } } catch {}
+    let loaded = false; const timer = setTimeout(() => { if (!loaded) status('Your watch list can’t be reached yet. It will appear when the connection returns.') }, 10000);
+    db.collection('watches').onSnapshot((snap) => {
+      if (!snap.metadata.fromCache) { loaded = true; clearTimeout(timer); status('') }
+      watches = snap.docs.map(d => ({ id: d.id, ...d.data() })); render();
+    }, () => { clearTimeout(timer); status('The watch list stopped updating. Reload the page to reconnect.') });
+    db.doc('meta/settings').onSnapshot((s) => { settings = s.exists ? { ...s.data() } : {}; fillLimits(); render() }, () => {});
+  })();
+})();
+</script>
