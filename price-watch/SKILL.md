@@ -5,11 +5,15 @@ description: Finds the lowest price for a product across the top stores and give
 
 # Price Watch
 
+Version: 1.1.0 · Source and updates: https://github.com/yaswanth8/price-watch-skill
+
 Find the lowest real price for a product across the top stores, show it with buy links, and, if the user wants, keep watching it. Works on any Claude plan: web search is the only must-have. A dashboard, scripts and scheduled checks are used when the session has them.
 
 Two rules: **ask little** (most answers are in the request), and **never place an order without the user's live yes** after they've seen the final total. Money and parcels can't be undone.
 
 **Keep it light.** Every search and page fetch costs the user tokens and, on Free, their limited messages. Spend them on finding the price, not on reading.
+
+**Update check** (once per conversation; reads a few bytes): with code, run `python3 scripts/check_update.py`; without code, fetch `https://raw.githubusercontent.com/yaswanth8/price-watch-skill/main/price-watch/VERSION` with the web fetch tool. If it is higher than the Version line above, end your reply with one line: "A newer Price Watch (vX.Y.Z) is out: download https://github.com/yaswanth8/price-watch-skill/raw/main/dist/price-watch.zip and re-upload it in Customize → Skills." If the check fails or is blocked, say nothing about it.
 
 ## Quick start
 
@@ -118,4 +122,5 @@ Pause, retarget, switch to buy mode or remove by updating or deleting the watch 
 | `references/scheduling.md` | setting up recurring checks |
 | `scripts/extract_price.py` | reading a saved product page (code-capable sessions) |
 | `scripts/update_watch.py` | recording a check (code-capable sessions) |
+| `scripts/check_update.py` | the once-per-chat update check (code-capable sessions) |
 | `assets/price-watch.html` | first dashboard publish |

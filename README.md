@@ -1,5 +1,7 @@
 # Price watch: a Claude skill
 
+Version 1.1.0 · [Changelog](CHANGELOG.md)
+
 Type the skill name and a product. Claude finds the lowest price across the top stores and shows each store's price, star rating, stock and a buy link. If you want, it then keeps watching and tells you when the price drops.
 
 ```
@@ -48,9 +50,15 @@ price-watch/
 ├── assets/price-watch.html   the interactive dashboard (an artifact with a small database)
 ├── scripts/extract_price.py  reads price, stock and identifiers from a saved product page
 ├── scripts/update_watch.py   records a check across stores; decides new low / hit / drop
+├── scripts/check_update.py   tells you when a newer version is on GitHub
+├── VERSION                   the installed version
 └── references/
     ├── buying.md             confirm-before-checkout rules (loaded only when buying)
     └── scheduling.md         recurring checks (loaded only when scheduling)
 ```
+
+## Updates
+
+Once per chat the skill reads this repo's `price-watch/VERSION` file (a few bytes). If a newer version is out, it adds one line to its reply with the download link; re-upload the new zip to update. Nothing else is sent anywhere.
 
 No card numbers, passwords or other secrets are stored anywhere.
